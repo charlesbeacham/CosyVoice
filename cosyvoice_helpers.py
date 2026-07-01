@@ -72,7 +72,9 @@ def synthesize_v3(
     chunks = [j['tts_speech'] for j in _cosyvoice.inference_zero_shot(
         text, prompt_text, str(reference_wav), stream=False)]
     audio = _torch.cat(chunks, dim=1) if len(chunks) > 1 else chunks[0]
-    _torchaudio.save(str(output_wav), audio, _cosyvoice.sample_rate)
+    # torchaudio.save routes through TorchCodec (needs FFmpeg 4-7); write via soundfile instead
+    import soundfile as sf
+    sf.write(str(output_wav), audio.cpu().numpy().T, _cosyvoice.sample_rate)
     print(f'synthesized {output_wav} in {time.perf_counter() - start:.2f}s')
     return output_wav
 
@@ -104,7 +106,9 @@ def synthesize_v3_styled(
     chunks = [j['tts_speech'] for j in _cosyvoice.inference_instruct2(
         text, full_instruction, str(reference_wav), stream=False)]
     audio = _torch.cat(chunks, dim=1) if len(chunks) > 1 else chunks[0]
-    _torchaudio.save(str(output_wav), audio, _cosyvoice.sample_rate)
+    # torchaudio.save routes through TorchCodec (needs FFmpeg 4-7); write via soundfile instead
+    import soundfile as sf
+    sf.write(str(output_wav), audio.cpu().numpy().T, _cosyvoice.sample_rate)
     print(f'synthesized {output_wav} in {time.perf_counter() - start:.2f}s')
     return output_wav
 

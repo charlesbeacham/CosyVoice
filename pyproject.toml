@@ -6,7 +6,6 @@ readme = "README.md"
 requires-python = ">=3.10,<3.11"
 dependencies = [
     "conformer==0.3.2",
-    "deepspeed==0.15.1 ; sys_platform == 'linux'",
     "diffusers==0.29.0",
     "fastapi==0.115.6",
     "fastapi-cli==0.0.4",
@@ -25,10 +24,14 @@ dependencies = [
     "modelscope==1.20.0",
     "networkx==3.1",
     "numpy==1.26.4",
+    # RTX 5090 (sm_120) setup — see notes at bottom of file.
+    # nvcc compiler staged for future deepspeed training (not needed for inference).
+    "nvidia-cuda-nvcc-cu12>=12.9.86",
     "omegaconf==2.3.0",
     "onnx==1.16.0",
     "onnxruntime==1.18.0 ; sys_platform == 'darwin' or sys_platform == 'win32'",
     "onnxruntime-gpu==1.18.0 ; sys_platform == 'linux'",
+    # Bumped from 20231117: old version pinned triton<3, which conflicts with torch>=2.7 (needs triton>=3.3).
     "openai-whisper==20250625",
     "protobuf==4.25",
     "pyarrow==18.1.0",
@@ -38,6 +41,8 @@ dependencies = [
     "setuptools<81",
     "soundfile==0.12.1",
     "tensorboard==2.14.0",
+    # torch>=2.7 from the cu128 index (below) — required for RTX 5090 / Blackwell sm_120 kernels.
+    # Old torch==2.3.1 gave "sm_120 not compatible" / "no kernel image available".
     "torch>=2.7.0",
     "torchaudio>=2.7.0",
     "transformers==4.51.3",
@@ -55,6 +60,19 @@ torch = { index = "pytorch-cu128" }
 torchaudio = { index = "pytorch-cu128" }
 
 [[tool.uv.index]]
+# cu128 wheels are the first with sm_120 kernels for the RTX 5090 (Blackwell).
 name = "pytorch-cu128"
 url = "https://download.pytorch.org/whl/cu128"
 explicit = true
+
+# --- RTX 5090 / training notes ------------------------------------------------
+# deepspeed was removed because it's training-only (cosyvoice/bin/train.py,
+# cosyvoice/utils/train_utils.py) and its import crashes on this machine:
+# transformers auto-imports it, and deepspeed runs `$CUDA_HOME/bin/nvcc -V` at
+# import time, but there's no system CUDA toolkit here (only pip runtime wheels).
+#
+# To re-enable training:
+#   uv add "deepspeed==0.15.1 ; sys_platform == 'linux'"
+#   export CUDA_HOME=.venv/lib/python3.10/site-packages/nvidia/cuda_nvcc   # has bin/nvcc
+# (A machine-wide system CUDA toolkit would be a better long-term choice.)
+# -----------------------------------------------------------------------------

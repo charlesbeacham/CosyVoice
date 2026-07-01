@@ -81,7 +81,10 @@ def filter(data,
             Iterable[{key, wav, label, sample_rate}]
     """
     for sample in data:
-        sample['speech'], sample['sample_rate'] = torchaudio.load(BytesIO(sample['audio_data']))
+        # torchaudio.load routes through TorchCodec (needs FFmpeg 4-7); use soundfile instead
+        import soundfile as sf
+        audio, sample['sample_rate'] = sf.read(BytesIO(sample['audio_data']), dtype='float32', always_2d=True)
+        sample['speech'] = torch.from_numpy(audio.T)  # (channels, frames)
         sample['speech'] = sample['speech'].mean(dim=0, keepdim=True)
         del sample['audio_data']
         # sample['wav'] is torch.Tensor, we have 100 frames every second

@@ -42,7 +42,11 @@ def read_json_lists(list_file):
 
 
 def load_wav(wav, target_sr, min_sr=16000):
-    speech, sample_rate = torchaudio.load(wav, backend='soundfile')
+    # torchaudio.load routes through TorchCodec in torch>=2.9, which needs FFmpeg 4-7
+    # (this machine has FFmpeg 8). Read via soundfile instead. See notes in pyproject.toml.
+    import soundfile as sf
+    audio, sample_rate = sf.read(wav, dtype='float32', always_2d=True)  # (frames, channels)
+    speech = torch.from_numpy(audio.T)  # (channels, frames)
     speech = speech.mean(dim=0, keepdim=True)
     if sample_rate != target_sr:
         assert sample_rate >= min_sr, 'wav sample rate {} must be greater than {}'.format(sample_rate, target_sr)
